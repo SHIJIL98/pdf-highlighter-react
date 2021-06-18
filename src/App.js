@@ -1,4 +1,8 @@
+// @flow
+/* eslint import/no-webpack-loader-syntax: 0 */
+
 import React, { Component } from "react";
+import PDFWorker from "worker-loader!pdfjs-dist/lib/pdf.worker";
 
 import {
   PdfLoader,
@@ -6,13 +10,30 @@ import {
   Tip,
   Highlight,
   Popup,
-  AreaHighlight
+  AreaHighlight,
+  setPdfWorker
 } from "react-pdf-highlighter";
 
 import testHighlights from "./test-highlights";
 
 import Spinner from "./Spinner";
 import Sidebar from "./Sidebar";
+
+import type {
+  T_Highlight,
+  T_NewHighlight
+} from "react-pdf-highlighter/src/types";
+
+import "./style/App.css";
+
+setPdfWorker(PDFWorker);
+
+type Props = {};
+
+type State = {
+  url: string,
+  highlights: Array<T_Highlight>
+};
 
 const getNextId = () => String(Math.random()).slice(2);
 
@@ -37,13 +58,15 @@ const searchParams = new URLSearchParams(document.location.search);
 
 const initialUrl = searchParams.get("url") || PRIMARY_PDF_URL;
 
-class App extends Component {
+class App extends Component<Props, State> {
   state = {
     url: initialUrl,
     highlights: testHighlights[initialUrl]
       ? [...testHighlights[initialUrl]]
       : []
   };
+
+  state: State;
 
   resetHighlights = () => {
     this.setState({
@@ -79,13 +102,13 @@ class App extends Component {
     );
   }
 
-  getHighlightById(id) {
+  getHighlightById(id: string) {
     const { highlights } = this.state;
 
-    return highlights.find((highlight) => highlight.id === id);
+    return highlights.find(highlight => highlight.id === id);
   }
 
-  addHighlight(highlight) {
+  addHighlight(highlight: T_NewHighlight) {
     const { highlights } = this.state;
 
     console.log("Saving highlight", highlight);
@@ -95,11 +118,11 @@ class App extends Component {
     });
   }
 
-  updateHighlight(highlightId, position, content) {
+  updateHighlight(highlightId: string, position: Object, content: Object) {
     console.log("Updating highlight", highlightId, position, content);
 
     this.setState({
-      highlights: this.state.highlights.map((h) => {
+      highlights: this.state.highlights.map(h => {
         const {
           id,
           position: originalPosition,
@@ -136,13 +159,13 @@ class App extends Component {
           }}
         >
           <PdfLoader url={url} beforeLoad={<Spinner />}>
-            {(pdfDocument) => (
+            {pdfDocument => (
               <PdfHighlighter
                 pdfDocument={pdfDocument}
-                enableAreaSelection={(event) => event.altKey}
+                enableAreaSelection={event => event.altKey}
                 onScrollChange={resetHash}
                 // pdfScaleValue="page-width"
-                scrollRef={(scrollTo) => {
+                scrollRef={scrollTo => {
                   this.scrollViewerTo = scrollTo;
 
                   this.scrollToHighlightFromHash();
@@ -155,7 +178,7 @@ class App extends Component {
                 ) => (
                   <Tip
                     onOpen={transformSelection}
-                    onConfirm={(comment) => {
+                    onConfirm={comment => {
                       this.addHighlight({ content, position, comment });
 
                       hideTipAndSelection();
@@ -183,8 +206,9 @@ class App extends Component {
                     />
                   ) : (
                     <AreaHighlight
+                      isScrolledTo={isScrolledTo}
                       highlight={highlight}
-                      onChange={(boundingRect) => {
+                      onChange={boundingRect => {
                         this.updateHighlight(
                           highlight.id,
                           { boundingRect: viewportToScaled(boundingRect) },
@@ -197,8 +221,8 @@ class App extends Component {
                   return (
                     <Popup
                       popupContent={<HighlightPopup {...highlight} />}
-                      onMouseOver={(popupContent) =>
-                        setTip(highlight, (highlight) => popupContent)
+                      onMouseOver={popupContent =>
+                        setTip(highlight, highlight => popupContent)
                       }
                       onMouseOut={hideTip}
                       key={index}
